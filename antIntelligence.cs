@@ -1,14 +1,13 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 
 using AntMe.English;
 
-// Add your own name behind AntMe.Player
-namespace AntMe.Player.SuperCoolAnts
+namespace AntMe.Player.SuperCoolAntsV2
 {
 
     // It is necessary to give a name to your colony. Please also add your first and last name
-    [Player(ColonyName = "SuperCoolAnts",
+    [Player(ColonyName = "SuperCoolAntsV2",
         FirstName = "Claudio Spiess",
         LastName = "Riccardo Felluga"
     )]
@@ -41,15 +40,6 @@ namespace AntMe.Player.SuperCoolAnts
            SpeedModificator = 1,
            ViewRangeModificator = -1
     )]
-    [Caste(Name = "Anthill",
-           AttackModificator = 0,
-           EnergyModificator = 0,
-           LoadModificator = 0,
-           RangeModificator = 0,
-           RotationSpeedModificator = 0,
-           SpeedModificator = 0,
-           ViewRangeModificator = 0
-    )]
 
 
     public class MyAnt : BaseAnt
@@ -62,7 +52,14 @@ namespace AntMe.Player.SuperCoolAnts
         public bool spottedPath = false;
         public int spottedWorkersOnWayBack = 0;
         public Item prevTarget = null;
-        public Marker anthillMarker = null;
+        Boolean hasTarget = false;
+        public enum Markers
+        {
+            Sugar = 0,
+            SugarTrace = 1,
+            Fruit = 2,
+            Bug = 3
+        }
 
 
         #region Caste
@@ -74,18 +71,12 @@ namespace AntMe.Player.SuperCoolAnts
         /// <returns>The name of the cast of the new ant spawned next.</returns>
         public override string ChooseType(Dictionary<string, int> count)
         {
-
-             if (count["Anthill"] == 0)
-            {
-                return "Anthill";
-            }
-
-            if (count["Sugar"] < 50)
+            if (count["Sugar"] < 30)
             {
                 return "Sugar";
             }
 
-            else if (count["Fruit"] < 30)
+            else if (count["Fruit"] < 15)
             {
                 return "Fruit";
             }
@@ -103,8 +94,7 @@ namespace AntMe.Player.SuperCoolAnts
 		/// </summary>
 		public override void Waits()
         {
-            if (!this.Caste.Equals("Anthill"))
-            {
+
                 GoAhead(trackLength);
                 if (lastTurn)
                 {
@@ -116,10 +106,6 @@ namespace AntMe.Player.SuperCoolAnts
                     TurnByDegrees(-trackAngle);
                     lastTurn = true;
                 }
-            }
-            else {
-                MakeMark(4, 500);
-            }
         }
 
         /// <summary>
@@ -154,7 +140,7 @@ namespace AntMe.Player.SuperCoolAnts
         /// <summary>
         /// Is called continuously whenever the ant sees at least one fruit
         /// </summary>
-        /// <param name="fruit">Das n‰chstgelegene Obstst¸ck.</param>
+        /// <param name="fruit">Das n√§chstgelegene Obstst√ºck.</param>
         public override void Spots(Fruit fruit)
         {
             if (this.Caste.Equals("Fruit"))
@@ -175,7 +161,7 @@ namespace AntMe.Player.SuperCoolAnts
         public override void TargetReached(Sugar sugar)
         {
             Take(sugar);
-            MakeMark(0, sugarMarkerSize);
+            MakeMark((int) Markers.Sugar, 200);
             GoAwayFromTarget(sugar);
             GoBackToAnthill();
            
@@ -193,7 +179,7 @@ namespace AntMe.Player.SuperCoolAnts
             Take(fruit);
             if (NeedsCarrier(fruit))
             {
-                MakeMark(2, 200); //2 == fruit help mark
+                MakeMark((int) Markers.Fruit, 200); //2 == fruit help mark
             }
             GoBackToAnthill();
             prevTarget = this.Target;
@@ -206,36 +192,33 @@ namespace AntMe.Player.SuperCoolAnts
         /// <summary>
         /// Is called once if the ant smells a marker from the own colony. !!!!!!!!!! Markers smelled once are not smelled again. !!!!!!!!!!
         /// </summary>
-        /// <param name="marker">Die n‰chste neue Markierung.</param>
+        /// <param name="marker">Die n√§chste neue Markierung.</param>
         public override void SmellsFriend(Marker marker)
         {
-            if (marker.Information == 4 && this.Caste.Equals("Sugar"))
-            {
-                anthillMarker = marker;
-            }
-
             if (CurrentLoad == 0) {
-                if (this.Caste.Equals("Sugar") && marker.Id == 0)
+                if (this.Caste.Equals("Sugar") && marker.Id == (int)Markers.Sugar)
                 {
-                    TurnToTarget(marker);
+                    //TurnToTarget(marker);
                     GoToTarget(marker);
                     prevTarget = marker;
                 }
-                else if (this.Caste.Equals("Sugar") && marker.Id == 1)
+                else if (this.Caste.Equals("Sugar") && marker.Id == (int)Markers.SugarTrace)
                 {
-                    TurnToTarget(marker);
+                    //TurnToTarget(marker);
                     GoAhead(50);
                 }
-                else if (this.Caste.Equals("Fruit") && marker.Id == 2)
+                else if (this.Caste.Equals("Fruit") && marker.Id == (int)Markers.Fruit)
                 {
-                    TurnToTarget(marker);
+                    //TurnToTarget(marker);
                     GoToTarget(marker);
                     prevTarget = marker;
                 }
-                else if (this.Caste.Equals("Ninja") && marker.Id == 3)
+                else if (this.Caste.Equals("Ninja") && marker.Id == (int)Markers.Bug && !hasTarget)
                 {
-                    TurnToTarget(marker);
+                    hasTarget = true;
+                    //TurnToTarget(marker);
                     GoToTarget(marker);
+        
                 }
 
                 
@@ -249,7 +232,11 @@ namespace AntMe.Player.SuperCoolAnts
 		/// <param name="ant">The nearest ant from the same colony</param>
 		public override void SpotsFriend(Ant ant)
         {
-            
+            if(this.Caste.Equals("Ninja"))
+            {
+                //TurnToTarget(ant);
+               // GoToTarget(ant);
+            }
         }
 
 
@@ -263,12 +250,17 @@ namespace AntMe.Player.SuperCoolAnts
 		/// <param name="bug">The nearest bug.</param>
 		public override void SpotsEnemy(Bug bug)
 		{
-            if (CarringFruit != null || CurrentLoad != 0)
-            {
-                MakeMark(3, 200); // bug spotted == 3
-            }
+            //if (CarringFruit != null || CurrentLoad != 0)
+            //{
+                 // bug spotted == 3
+            //}
             if (this.Caste.Equals("Ninja")) {
                 Attack(bug);
+                MakeMark((int)Markers.Bug, 100);
+            }
+            else
+            {
+                MakeMark((int)Markers.Bug, 300);
             }
 		}
 
@@ -302,6 +294,8 @@ namespace AntMe.Player.SuperCoolAnts
 		/// <param name="kindofdeath">Why the ant died</param>
 		public override void HasDied(KindOfDeath kindofdeath)
 		{
+            if(kindofdeath == KindOfDeath.Eaten)
+            MakeMark((int)Markers.Bug, 200);
 		}
 
 		/// <summary>
@@ -310,13 +304,14 @@ namespace AntMe.Player.SuperCoolAnts
 		public override void Tick()
 		{
             if (CarringFruit == null && CurrentLoad != 0 ) {
-                MakeMark(1, 15); // 1 == sugar track trace
+                MakeMark((int)Markers.SugarTrace, 15); // 1 == sugar track trace
             } else if (CarringFruit != null && NeedsCarrier(CarringFruit))
             {
-                MakeMark(2, 50); // fruit trace
-            } else if(this.Caste.Equals("Anthill"))
+                MakeMark((int)Markers.Fruit, 50); // fruit trace
+            }
+            if(this.Caste.Equals("Ninja"))
             {
-         //       MakeMark(4, int.MaxValue);
+                hasTarget = false;
             }
 		}
 
